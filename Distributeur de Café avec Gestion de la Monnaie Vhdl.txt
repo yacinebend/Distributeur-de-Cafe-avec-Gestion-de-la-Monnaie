@@ -1,0 +1,122 @@
+--------------------------------------
+-- Projet : Gestion de Monnaie pour
+-- un Distributeur de Cafe 1er annee
+-- Master Technologies Immersives
+-- Realisé par :
+-- Yacine BENDNAIBA
+-- Soufiane SALIKI
+-- Oumaima AIT EL MOUDENE
+--------------------------------------
+
+Library ieee;
+use ieee.std_logic_1164.all;
+use ieee.std_logic_arith.all;
+use ieee.std_logic_unsigned.all;
+use ieee.numeric_std.all;
+
+entity Distributeur is
+	port (
+		rst : in std_logic;
+		clk : in std_logic;
+		voy_cafe_delivre, voy_monnaie_insuff : out std_logic := '0';
+		piece_monnaie : in std_logic_vector(2 downto 0);
+		cafe_type : in std_logic_vector(2 downto 0);
+		somme_monnaie : out std_logic_vector(7 downto 0);
+		reste_monnaie : out std_logic_vector(7 downto 0)
+	);
+end Distributeur;
+
+architecture gestion_monnaie of Distributeur is
+
+signal somme : std_logic_vector(7 downto 0) := (others => '0');
+signal reste : std_logic_vector(7 downto 0) := (others => 'Z');
+signal cafe_choix : std_logic_vector(2 downto 0) := (others => '0');
+-- prix des cafe
+constant cafe_au_lait_prix : std_logic_vector(7 downto 0) := "00001010"; -- 10 DH
+constant Americano_prix : std_logic_vector(7 downto 0) := "00001100"; -- 12 DH
+constant Cappuccino_prix : std_logic_vector(7 downto 0) := "00000111"; -- 7 DH
+constant Espresso_prix : std_logic_vector(7 downto 0) := "00001001"; -- 9 DH
+
+begin
+
+process(piece_monnaie, rst, clk)
+begin
+	if rst = '1' then
+		somme <= (others => '0');
+	elsif rising_edge(clk) then
+		case piece_monnaie is
+			when "001" => somme <= somme + "00000001"; -- 1 DH
+			when "010" => somme <= somme + "00000010"; -- 2 DH
+			when "011" => somme <= somme + "00000101"; -- 5 DH
+			when "100" => somme <= somme + "00001010"; -- 10 DH
+			when others => null; -- default case
+		end case;
+	end if;
+end process;
+
+process(cafe_type, rst)
+begin
+	if rst = '1' then
+		cafe_choix <= (others => '0');
+	else
+		cafe_choix <= cafe_type;
+	end if;
+end process;
+
+process(cafe_choix, rst)
+begin
+	if rst = '1' then
+		reste <= (others => 'Z');
+	else
+		case cafe_choix is
+			when "001" => -- cafe au lait
+				if somme >= cafe_au_lait_prix then
+					reste <= somme - cafe_au_lait_prix;
+				end if;
+			when "010" => -- Americano
+				if somme >= Americano_prix then
+					reste <= somme - Americano_prix;
+				end if;
+			when "011" => -- Cappuccino
+				if somme >= Cappuccino_prix then
+					reste <= somme - Cappuccino_prix;
+				end if;
+			when "100" => -- Espresso
+				if somme >= Espresso_prix then
+					reste <= somme - Espresso_prix;
+				end if;
+			when others => null; -- default case
+		end case;
+	end if;
+end process;
+
+process(reste, rst)
+begin
+	if rst = '1' then
+		voy_monnaie_insuff <= '0';
+		voy_cafe_delivre <= '0';
+	else
+		if somme > "00000000" and cafe_choix /= "000" then
+			if reste = "ZZZZZZZZ" then
+				voy_monnaie_insuff <= '1';
+			else
+				voy_cafe_delivre <= '1';
+				voy_monnaie_insuff <= '0';
+			end if;
+		end if;
+	end if;
+end process;
+
+--
+process(somme, reste, rst)
+begin
+	if rst = '1' then
+		somme_monnaie <= (others => '0');
+		reste_monnaie <= (others => '0');
+	else
+		somme_monnaie <= somme;
+		reste_monnaie <= reste;
+	end if;
+end process;
+
+end gestion_monnaie;
